@@ -1,10 +1,10 @@
 import RPi.GPIO as GPIO
 import time
 
-# Configuración del modo de numeración de pines
-GPIO.setmode(GPIO.BCM)  # Usa numeración BCM (pines GPIO)
 
-def setup_motor(pin, frequency=5000):
+GPIO.setmode(GPIO.BCM)  
+
+def setup_motor(pin, frequency=250):
     """
     Configura el pin como salida PWM para controlar el motor.
 
@@ -15,9 +15,9 @@ def setup_motor(pin, frequency=5000):
     Returns:
         pwm: Objeto PWM inicializado.
     """
-    GPIO.setup(pin, GPIO.OUT)  # Configura el pin como salida
-    pwm = GPIO.PWM(pin, frequency)  # Inicia PWM con la frecuencia especificada
-    pwm.start(0)  # Comienza con potencia 0%
+    GPIO.setup(pin, GPIO.OUT)  
+    pwm = GPIO.PWM(pin, frequency)  
+    pwm.start(0)  
     return pwm
 
 def set_motor_power(pwm, power):
@@ -29,7 +29,7 @@ def set_motor_power(pwm, power):
         power: Potencia en porcentaje (0-100).
     """
     if 0 <= power <= 100:
-        pwm.ChangeDutyCycle(power)  # Cambia el ciclo de trabajo al valor especificado
+        pwm.ChangeDutyCycle(power)  
     else:
         print("Error: La potencia debe estar entre 0 y 100.")
 
@@ -58,15 +58,14 @@ def cleanup():
 
 # Ejemplo de uso
 if __name__ == "__main__":
-    motor_pin = 20  # Pin GPIO principal
+    motor_pin = 20  
     try:
-        # Cambia la frecuencia según sea necesario (prueba con 5000 o 10000 Hz)
-        pwm_motor = setup_motor(motor_pin, frequency=5000)  
+        pwm_motor = setup_motor(motor_pin, frequency=250)  
         
         while True:
             potencia = get_motor_power_input()
             set_motor_power(pwm_motor, potencia)
-            time.sleep(0.5)  # Pausa para observar los cambios
+            time.sleep(0.5)  
             
     except KeyboardInterrupt:
         print("Detenido por el usuario.")

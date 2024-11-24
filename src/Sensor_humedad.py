@@ -3,7 +3,7 @@ import time
 
 # Configuración de pines
 sensor_pin = ADC(Pin(26))  # Pin ADC (lectura del sensor)
-output_pin = Pin(15, Pin.OUT)  # Pin de salida para la señal
+output_pin = Pin(14, Pin.OUT)  # Pin de salida para la señal
 
 # Función para calcular el porcentaje de humedad
 def calcular_porcentaje_humedad(valor):
