@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Control del Invernadero Inteligente</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      /* Styles similar to original */
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Control del Invernadero Inteligente</h1>
+    </header>
+    <div class="container">
+      <!-- Default Operation -->
+      <div class="section">
+        <h2>Operación Predeterminada</h2>
+        <button onclick="defaultOperation()">
+          Iniciar Operación Predeterminada
+        </button>
+      </div>
+
+      <!-- Fan Control -->
+      <div class="section">
+        <h2>Control del Ventilador</h2>
+        <button onclick="toggleFan(true)">Encender</button>
+        <button onclick="toggleFan(false)">Apagar</button>
+        <label for="fanPower">Potencia:</label>
+        <input
+          type="range"
+          id="fanPower"
+          min="0"
+          max="100"
+          value="50"
+          oninput="updateFanPower()"
+        />
+      </div>
+
+      <!-- Light Control -->
+      <div class="section">
+        <h2>Control de la Luz</h2>
+        <button onclick="toggleLight(true)">Encender</button>
+        <button onclick="toggleLight(false)">Apagar</button>
+        <label for="lightPower">Intensidad:</label>
+        <input
+          type="range"
+          id="lightPower"
+          min="0"
+          max="100"
+          value="50"
+          oninput="updateLightPower()"
+        />
+      </div>
+
+      <!-- Water Pump Control -->
+      <div class="section">
+        <h2>Control de la Bomba de Agua</h2>
+        <button onclick="togglePump(true)">Encender</button>
+        <button onclick="togglePump(false)">Apagar</button>
+      </div>
+    </div>
+
+    <script>
+      function defaultOperation() {
+        fetch("/default");
+      }
+      function toggleFan(state) {
+        fetch(`/fan?state=${state}`);
+      }
+      function updateFanPower() {
+        const power = document.getElementById("fanPower").value;
+        fetch(`/fan/power?value=${power}`);
+      }
+      function toggleLight(state) {
+        fetch(`/light?state=${state}`);
+      }
+      function updateLightPower() {
+        const power = document.getElementById("lightPower").value;
+        fetch(`/light/power?value=${power}`);
+      }
+      function togglePump(state) {
+        fetch(`/pump?state=${state}`);
+      }
+    </script>
+  </body>
+</html>
