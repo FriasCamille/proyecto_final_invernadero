@@ -13,6 +13,7 @@ GPIO_PIN_FAN2 = 21
 fan_pwm1 = None
 fan_pwm2 = None
 
+
 # Inicialización de los ventiladores
 def initialize_fans():
     """
@@ -37,7 +38,40 @@ def control_fan(fan, power=None, state=None):
 
 
 class ControlServer(BaseHTTPRequestHandler):
+    def _serve_ui_file(self):
+        """
+        Sirve el archivo HTML al cliente.
+        """
+        try:
+            with open("control_interface.html", "r") as f:
+                content = f.read()
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(bytes(content, "utf-8"))
+        except FileNotFoundError:
+            self.send_error(404, "Archivo HTML no encontrado")
+
+    def do_GET(self):
+        """
+        Maneja solicitudes GET para servir el archivo HTML o datos.
+        """
+        if self.path == "/":
+            self._serve_ui_file()
+        elif self.path == "/status":
+            # Devuelve el estado de los ventiladores
+            response = {"fan1": fan_pwm1 is not None, "fan2": fan_pwm2 is not None}
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(bytes(json.dumps(response), "utf-8"))
+        else:
+            self.send_error(404)
+
     def do_POST(self):
+        """
+        Maneja solicitudes POST para controlar los ventiladores.
+        """
         content_length = int(self.headers.get('Content-Length'))
         post_data = self.rfile.read(content_length)
         try:
