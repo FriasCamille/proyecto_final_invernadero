@@ -1,6 +1,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from funciones import update_custom_setpoint, solve_temp, solve_humidity, get_setpoint
+from funciones import update_custom_setpoint, get_setpoint, solve_temp
+from Temperature import read_temperature
 
 # Configuración del servidor
 address = "192.168.1.254"
@@ -8,7 +9,7 @@ port = 8080
 
 class ControlServer(BaseHTTPRequestHandler):
     def _serve_ui_file(self):
-        with open("control_interface.html", "r") as f:
+        with open("indexv2.html", "r") as f:
             content = f.read()
         self.send_response(200)
         self.send_header("Content-type", "text/html")
@@ -28,15 +29,23 @@ class ControlServer(BaseHTTPRequestHandler):
             data = json.loads(post_data.decode("utf-8"))
             action = data.get("action")
             value = data.get("value")
+            response = {}
 
             if action == "update_setpoint":
                 update_custom_setpoint(float(value))
+                response["message"] = "Setpoint actualizado"
+            elif action == "get_temperature":
+                current_temp = read_temperature()
+                response["temperature"] = current_temp
             elif action == "solve_temp":
-                solve_temp(get_setpoint())  # Asume que `get_setpoint` está importado
-            elif action == "solve_humidity":
-                solve_humidity()
+                setpoint = get_setpoint()
+                solve_temp(setpoint)
+                response["message"] = "Resolviendo temperatura"
+
             self.send_response(200)
+            self.send_header("Content-type", "application/json")
             self.end_headers()
+            self.wfile.write(bytes(json.dumps(response), "utf-8"))
         except Exception as e:
             print("Error procesando la solicitud:", e)
             self.send_response(500)

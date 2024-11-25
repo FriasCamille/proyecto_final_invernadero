@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Control de Temperatura y Humedad</title>
+    <title>Control de Temperatura</title>
     <meta charset="UTF-8" />
     <style>
       body {
@@ -15,35 +15,31 @@
         align-items: center;
         gap: 20px;
       }
-      button {
+      button,
+      input {
         padding: 10px 20px;
         font-size: 16px;
         cursor: pointer;
       }
-      input {
-        padding: 10px;
-        font-size: 16px;
-        width: 200px;
+      .output {
+        font-size: 18px;
       }
     </style>
   </head>
   <body>
-    <h1>Control de Temperatura y Humedad</h1>
+    <h1>Control de Temperatura</h1>
     <div class="container">
       <div>
         <h3>Actualizar Setpoint Personalizado</h3>
         <input type="number" id="setpoint" placeholder="Setpoint en °C" />
-        <button onclick="sendCommand('update_setpoint')">Actualizar</button>
-      </div>
-      <div>
-        <h3>Ejecutar Funciones</h3>
-        <button onclick="sendCommand('solve_temp')">
-          Resolver Temperatura
-        </button>
-        <button onclick="sendCommand('solve_humidity')">
-          Resolver Humedad
+        <button onclick="sendCommand('update_setpoint')">
+          Actualizar Setpoint
         </button>
       </div>
+      <div class="output" id="temperature-display">Temperatura actual: ---</div>
+      <button onclick="sendCommand('get_temperature')">
+        Obtener Temperatura
+      </button>
     </div>
     <script>
       function sendCommand(action) {
@@ -55,10 +51,18 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
-        }).then((response) => {
-          if (response.ok) alert("Comando enviado correctamente");
-          else alert("Error enviando comando");
-        });
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.temperature) {
+              document.getElementById(
+                "temperature-display"
+              ).innerText = `Temperatura actual: ${data.temperature.toFixed(
+                2
+              )}°C`;
+            }
+          })
+          .catch(() => alert("Error en la solicitud"));
       }
     </script>
   </body>
