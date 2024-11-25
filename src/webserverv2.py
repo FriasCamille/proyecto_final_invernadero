@@ -33,7 +33,7 @@ def monitor_setpoint():
                 print("Iniciando el sistema PID con el nuevo setpoint...")
                 main_thread = Thread(target=main, daemon=True)
                 main_thread.start()
-        sleep(1)  # Monitorear cada 5 segundos
+        sleep(5)  # Monitorear cada 5 segundos
 
 
 class ControlServer(BaseHTTPRequestHandler):
