@@ -32,12 +32,13 @@
       <div>
         <h3>Actualizar Temperatura en Celsius</h3>
         <input type="number" id="setpoint" placeholder="Temperatura en °C" />
-        <button onclick="sendCommand()">Actualizar</button>
+        <button onclick="updateSetpoint()">Actualizar</button>
       </div>
       <div class="output" id="temperature-display">Temperatura actual: ---</div>
     </div>
     <script>
-      function sendCommand() {
+      // Función para actualizar el setpoint
+      function updateSetpoint() {
         const data = {
           action: "update_setpoint",
           value: document.getElementById("setpoint").value,
@@ -49,18 +50,38 @@
         })
           .then((response) => response.json())
           .then((data) => {
+            if (data.message) {
+              alert(data.message);
+            }
+          })
+          .catch(() => alert("Error al actualizar el setpoint"));
+      }
+
+      // Función para actualizar la temperatura automáticamente
+      function updateTemperature() {
+        fetch(window.location.href + "temperature", {
+          method: "GET",
+        })
+          .then((response) => response.json())
+          .then((data) => {
             if (data.temperature) {
               document.getElementById(
                 "temperature-display"
               ).innerText = `Temperatura actual: ${data.temperature.toFixed(
                 2
               )}°C`;
-            } else if (data.message) {
-              alert(data.message);
             }
           })
-          .catch(() => alert("Error en la solicitud"));
+          .catch(() => {
+            document.getElementById("temperature-display").innerText =
+              "Error obteniendo temperatura.";
+          });
       }
+
+      // Actualiza la temperatura cada 5 segundos
+      setInterval(updateTemperature, 5000);
+      // Llama a la función al cargar la página
+      updateTemperature();
     </script>
   </body>
 </html>

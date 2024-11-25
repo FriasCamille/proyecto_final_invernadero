@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from threading import Thread
-from funciones import update_custom_setpoint, get_setpoint, solve_temp, main
+from funciones import update_custom_setpoint, get_setpoint, main
 from Temperature import read_temperature
 
 # Configuración del servidor
@@ -24,6 +24,14 @@ class ControlServer(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/":
             self._serve_ui_file()
+        elif self.path == "/temperature":
+            # Devuelve la temperatura actual en JSON
+            current_temp = read_temperature()
+            response = {"temperature": current_temp}
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(bytes(json.dumps(response), "utf-8"))
         else:
             self.send_error(404)
 
@@ -45,8 +53,6 @@ class ControlServer(BaseHTTPRequestHandler):
                     main_thread = Thread(target=main, daemon=True)
                     main_thread.start()
                 response["message"] = "Setpoint actualizado e inicio del control PID"
-                # Devuelve la temperatura actual para mostrar en la interfaz
-                response["temperature"] = read_temperature()
 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
