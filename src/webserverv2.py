@@ -1,6 +1,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from threading import Thread
+from time import sleep
 from funciones import update_custom_setpoint, get_setpoint, main
 from Temperature import read_temperature
 
@@ -10,11 +11,27 @@ port = 8080
 
 # Variable para controlar el hilo del sistema principal
 main_thread = None
+setpoint_thread = None
+current_setpoint = None
+
+
+def monitor_setpoint():
+    """
+    Hilo que monitorea y actualiza el setpoint automáticamente.
+    """
+    global current_setpoint
+    while True:
+        new_setpoint = get_setpoint()
+        if new_setpoint != current_setpoint:
+            current_setpoint = new_setpoint
+            update_custom_setpoint(current_setpoint)
+            print(f"Setpoint actualizado automáticamente: {current_setpoint}°C")
+        sleep(5)  # Monitorear cada 5 segundos
 
 
 class ControlServer(BaseHTTPRequestHandler):
     def _serve_ui_file(self):
-        with open("indexv2.html", "r") as f:
+        with open("control_interface.html", "r") as f:
             content = f.read()
         self.send_response(200)
         self.send_header("Content-type", "text/html")
@@ -65,6 +82,11 @@ class ControlServer(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    # Inicia el hilo de monitoreo de setpoint
+    setpoint_thread = Thread(target=monitor_setpoint, daemon=True)
+    setpoint_thread.start()
+
+    # Inicia el servidor web
     server = HTTPServer((address, port), ControlServer)
     print(f"Servidor corriendo en http://{address}:{port}")
     try:
