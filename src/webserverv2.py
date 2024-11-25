@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import threading
-from funciones import solve_temp, solve_humidity, get_setpoint
+from funciones import solve_temp, solve_humidity, get_setpoint, update_custom_setpoint
 
 HOST = "192.168.1.254"
 PORT = 8080
@@ -32,11 +32,12 @@ class WebServer(BaseHTTPRequestHandler):
             self.wfile.write(b"Bad Request")
 
     def handle_action(self, action, value):
-        """
-        Maneja las acciones recibidas desde el frontend.
-        """
         if action == "default":
             threading.Thread(target=run_default_operation, daemon=True).start()
+        elif action == "set_default_temp":
+            # Actualizar el setpoint personalizado
+            update_custom_setpoint(float(value))
+            print(f"Setpoint predeterminado actualizado a {value}°C")
         elif action == "fan":
             # Encendido/apagado del ventilador
             print(f"Ventilador {'encendido' if value else 'apagado'}")
