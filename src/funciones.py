@@ -50,8 +50,6 @@ def solve_humidity():
     if GPIO.input(PIN_INTERRUPT) == GPIO.HIGH:
         GPIO.output(PIN_OUTPUT, GPIO.HIGH)
         print("Interrupción detectada, PIN 16 en ALTO")
-        time.sleep(1)
-        GPIO.output(PIN_OUTPUT, GPIO.LOW)
     else:
         GPIO.output(PIN_OUTPUT, GPIO.LOW)
 
@@ -65,5 +63,5 @@ def main():
         control_temperature(setpoint)  # Llama a la función de control de temperatura
         solve_temp(setpoint)
         solve_humidity()
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
