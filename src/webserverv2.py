@@ -1,6 +1,6 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from threading import Thread
+from threading import Thread, Event
 from time import sleep
 from funciones import update_custom_setpoint, get_setpoint, main
 from Temperature import read_temperature
@@ -9,31 +9,35 @@ from Temperature import read_temperature
 address = "192.168.1.254"
 port = 8080
 
-# Variable para controlar el hilo del sistema principal
-main_thread = None
-setpoint_thread = None
+# Variables globales
 current_setpoint = None
+setpoint_updated = Event()  # Evento para indicar un cambio en el setpoint
 
 
 def monitor_setpoint():
     """
-    Hilo que monitorea y actualiza el setpoint automáticamente.
-    Llama a `main` para iniciar el control PID si hay un cambio en el setpoint.
+    Monitorea los cambios en el setpoint y activa un evento si detecta un cambio.
     """
-    global current_setpoint, main_thread
+    global current_setpoint
     while True:
         new_setpoint = get_setpoint()
         if new_setpoint != current_setpoint:
             current_setpoint = new_setpoint
             update_custom_setpoint(current_setpoint)
-            print(f"Setpoint actualizado automáticamente: {current_setpoint}°C")
+            print("Setpoint actualizado automáticamente: {}°C".format(current_setpoint))
+            setpoint_updated.set()  # Marca el evento como activado
+        sleep(1)  # Reduce el intervalo para minimizar el delay
 
-            # Inicia el sistema PID si no está activo o reinicia con el nuevo setpoint
-            if not main_thread or not main_thread.is_alive():
-                print("Iniciando el sistema PID con el nuevo setpoint...")
-                main_thread = Thread(target=main, daemon=True)
-                main_thread.start()
-        sleep(5)  # Monitorear cada 5 segundos
+
+def pid_control():
+    """
+    Control PID en un hilo separado, reinicia automáticamente si cambia el setpoint.
+    """
+    while True:
+        setpoint_updated.wait()  # Espera a que el setpoint cambie
+        print("Iniciando/reiniciando control PID...")
+        main()  # Ejecuta el control PID con el setpoint actual
+        setpoint_updated.clear()  # Resetea el evento hasta el próximo cambio
 
 
 class ControlServer(BaseHTTPRequestHandler):
@@ -60,7 +64,6 @@ class ControlServer(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
-        global main_thread
         content_length = int(self.headers.get('Content-Length'))
         post_data = self.rfile.read(content_length)
         try:
@@ -70,12 +73,11 @@ class ControlServer(BaseHTTPRequestHandler):
             response = {}
 
             if action == "update_setpoint":
-                # Actualiza el setpoint
-                update_custom_setpoint(float(value))
-                # Inicia el sistema PID si no está activo
-                if not main_thread or not main_thread.is_alive():
-                    main_thread = Thread(target=main, daemon=True)
-                    main_thread.start()
+                # Actualiza el setpoint manualmente
+                global current_setpoint
+                current_setpoint = float(value)
+                update_custom_setpoint(current_setpoint)
+                setpoint_updated.set()  # Marca el evento para reiniciar el control PID
                 response["message"] = "Setpoint actualizado e inicio del control PID"
 
             self.send_response(200)
@@ -83,19 +85,21 @@ class ControlServer(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(bytes(json.dumps(response), "utf-8"))
         except Exception as e:
-            print("Error procesando la solicitud:", e)
+            print("Error procesando la solicitud: {}".format(e))
             self.send_response(500)
             self.end_headers()
 
 
 if __name__ == "__main__":
     # Inicia el hilo de monitoreo de setpoint
-    setpoint_thread = Thread(target=monitor_setpoint, daemon=True)
-    setpoint_thread.start()
+    Thread(target=monitor_setpoint, daemon=True).start()
+
+    # Inicia el hilo de control PID
+    Thread(target=pid_control, daemon=True).start()
 
     # Inicia el servidor web
     server = HTTPServer((address, port), ControlServer)
-    print(f"Servidor corriendo en http://{address}:{port}")
+    print("Servidor corriendo en http://{}:{}".format(address, port))
     try:
         server.serve_forever()
     except KeyboardInterrupt:
