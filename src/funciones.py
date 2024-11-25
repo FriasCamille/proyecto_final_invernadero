@@ -21,17 +21,31 @@ GPIO.setup(PIN_OUTPUT, GPIO.OUT)
 pwm_motor_1 = setup_motor(PIN_MOTOR_1)
 pwm_motor_2 = setup_motor(PIN_MOTOR_2)
 
+# Nueva variable global para almacenar la temperatura personalizada
+custom_setpoint = None
+
 def get_setpoint():
     """
-    Determina la temperatura deseada (setpoint) basada en la hora actual.
-
-    :return: Temperatura deseada (float).
+    Determina la temperatura deseada basada en la hora actual, 
+    o utiliza el valor personalizado si está configurado.
     """
+    global custom_setpoint
+    if custom_setpoint is not None:
+        return custom_setpoint  # Usar el valor personalizado si está definido
+
     current_hour = time.localtime().tm_hour
     if 6 <= current_hour < 20:  # De 6:00 AM a 8:00 PM
-        return 25.0  # Punto medio entre 21 y 29
+        return 25.0  # Temperatura diurna
     else:  # De 8:00 PM a 6:00 AM
-        return 12.5  # Punto medio entre 10 y 15
+        return 12.5  # Temperatura nocturna
+
+def update_custom_setpoint(value):
+    """
+    Actualiza el setpoint personalizado desde la página web.
+    """
+    global custom_setpoint
+    custom_setpoint = value
+
 
 def solve_temp(setpoint):
     actual_temp=read_temperature()
