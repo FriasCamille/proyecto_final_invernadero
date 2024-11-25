@@ -1,83 +1,23 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Control de Ventiladores</title>
-    <meta charset="UTF-8" />
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        margin: 20px;
-      }
-      .container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-      }
-      button,
-      input {
-        padding: 10px;
-        font-size: 16px;
-        cursor: pointer;
-      }
-      input[type="range"] {
-        width: 300px;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Control de Ventiladores</h1>
-    <div class="container">
-      <div>
-        <h3>Ventilador 1</h3>
-        <button onclick="toggleFan('fan1', true)">Encender</button>
-        <button onclick="toggleFan('fan1', false)">Apagar</button>
-        <input
-          type="range"
-          id="fan1-power"
-          min="0"
-          max="100"
-          oninput="setFanPower('fan1', this.value)"
-        />
-      </div>
-      <div>
-        <h3>Ventilador 2</h3>
-        <button onclick="toggleFan('fan2', true)">Encender</button>
-        <button onclick="toggleFan('fan2', false)">Apagar</button>
-        <input
-          type="range"
-          id="fan2-power"
-          min="0"
-          max="100"
-          oninput="setFanPower('fan2', this.value)"
-        />
-      </div>
-    </div>
-    <script>
-      function toggleFan(fan, state) {
-        const data = { action: "toggle_fan", fan: fan, state: state };
-        fetch("/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        })
-          .then((response) => response.json())
-          .then((data) => alert(data.message))
-          .catch(() => alert("Error al controlar el ventilador"));
-      }
-
-      function setFanPower(fan, power) {
-        const data = { action: "set_power", fan: fan, power: power };
-        fetch("/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        })
-          .then((response) => response.json())
-          .then((data) => console.log(data.message))
-          .catch(() => alert("Error al ajustar potencia del ventilador"));
-      }
-    </script>
-  </body>
-</html>
+<h3>Control de Ventiladores</h3>
+<div>
+  <button onclick="toggleFan('fan1', true)">Encender Ventilador 1</button>
+  <button onclick="toggleFan('fan1', false)">Apagar Ventilador 1</button>
+  <input
+    type="range"
+    id="fan1-power"
+    min="0"
+    max="100"
+    oninput="setFanPower('fan1', this.value)"
+  />
+</div>
+<div>
+  <button onclick="toggleFan('fan2', true)">Encender Ventilador 2</button>
+  <button onclick="toggleFan('fan2', false)">Apagar Ventilador 2</button>
+  <input
+    type="range"
+    id="fan2-power"
+    min="0"
+    max="100"
+    oninput="setFanPower('fan2', this.value)"
+  />
+</div>
