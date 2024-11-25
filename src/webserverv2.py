@@ -1,11 +1,16 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from funciones import update_custom_setpoint, get_setpoint, solve_temp
+from threading import Thread
+from funciones import update_custom_setpoint, get_setpoint, solve_temp, main
 from Temperature import read_temperature
 
 # Configuración del servidor
 address = "192.168.1.254"
 port = 8080
+
+# Variable para controlar el hilo del sistema principal
+main_thread = None
+
 
 class ControlServer(BaseHTTPRequestHandler):
     def _serve_ui_file(self):
@@ -23,6 +28,7 @@ class ControlServer(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
+        global main_thread
         content_length = int(self.headers.get('Content-Length'))
         post_data = self.rfile.read(content_length)
         try:
@@ -32,15 +38,15 @@ class ControlServer(BaseHTTPRequestHandler):
             response = {}
 
             if action == "update_setpoint":
+                # Actualiza el setpoint
                 update_custom_setpoint(float(value))
-                response["message"] = "Setpoint actualizado"
-            elif action == "get_temperature":
-                current_temp = read_temperature()
-                response["temperature"] = current_temp
-            elif action == "solve_temp":
-                setpoint = get_setpoint()
-                solve_temp(setpoint)
-                response["message"] = "Resolviendo temperatura"
+                # Inicia el sistema PID si no está activo
+                if not main_thread or not main_thread.is_alive():
+                    main_thread = Thread(target=main, daemon=True)
+                    main_thread.start()
+                response["message"] = "Setpoint actualizado e inicio del control PID"
+                # Devuelve la temperatura actual para mostrar en la interfaz
+                response["temperature"] = read_temperature()
 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -50,6 +56,7 @@ class ControlServer(BaseHTTPRequestHandler):
             print("Error procesando la solicitud:", e)
             self.send_response(500)
             self.end_headers()
+
 
 if __name__ == "__main__":
     server = HTTPServer((address, port), ControlServer)
