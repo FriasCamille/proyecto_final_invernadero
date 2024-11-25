@@ -34,12 +34,30 @@
         <input type="number" id="setpoint" placeholder="Temperatura en °C" />
         <button onclick="updateSetpoint()">Actualizar</button>
       </div>
+      <h3>Control de Ventiladores</h3>
       <div>
-        <h3>Control de Ventiladores</h3>
-        <input type="number" id="fan-power" placeholder="Potencia (0-100)" />
-        <button onclick="controlFan('on')">Encender</button>
-        <button onclick="controlFan('off')">Apagar</button>
+        <button onclick="toggleFan('fan1', true)">Encender Ventilador 1</button>
+        <button onclick="toggleFan('fan1', false)">Apagar Ventilador 1</button>
+        <input
+          type="range"
+          id="fan1-power"
+          min="0"
+          max="100"
+          oninput="setFanPower('fan1', this.value)"
+        />
       </div>
+      <div>
+        <button onclick="toggleFan('fan2', true)">Encender Ventilador 2</button>
+        <button onclick="toggleFan('fan2', false)">Apagar Ventilador 2</button>
+        <input
+          type="range"
+          id="fan2-power"
+          min="0"
+          max="100"
+          oninput="setFanPower('fan2', this.value)"
+        />
+      </div>
+
       <div class="output" id="temperature-display">Temperatura actual: ---</div>
     </div>
     <script>
