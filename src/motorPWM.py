@@ -7,9 +7,6 @@ GPIO.setmode(GPIO.BCM)
 
 motor_lock = Lock()  # Bloqueo para evitar accesos concurrentes
 
-# Estados de los ventiladores
-fan_states = {"fan1": False, "fan2": False}
-
 def setup_motor(pin, frequency=250):
     """
     Configura el pin como salida PWM para controlar el motor.
@@ -27,37 +24,20 @@ def setup_motor(pin, frequency=250):
     return pwm
 
 
-def set_motor_power(pwm, power, fan):
+def set_motor_power(pwm, power):
     """
-    Ajusta la potencia del motor si está encendido.
+    Ajusta la potencia del motor.
 
     Args:
         pwm: Objeto PWM configurado.
         power: Potencia en porcentaje (0-100).
-        fan: Identificador del ventilador (fan1, fan2).
     """
-    with motor_lock:
-        if fan_states[fan]:  # Verifica si el ventilador está encendido
-            if validate_power(power):
-                pwm.ChangeDutyCycle(power)
-                print(f"Potencia del {fan} ajustada a: {power}%")
-            else:
-                print("Error: La potencia debe estar entre 0 y 100.")
+    with motor_lock:  # Asegura que solo un proceso acceda al PWM
+        if validate_power(power):
+            pwm.ChangeDutyCycle(power)
+            print(f"Potencia del motor ajustada a: {power}%")
         else:
-            print(f"El {fan} está apagado. No se puede ajustar la potencia.")
-
-
-def toggle_fan(fan, state):
-    """
-    Enciende o apaga el ventilador.
-
-    Args:
-        fan: Identificador del ventilador (fan1, fan2).
-        state: Estado deseado (True para encender, False para apagar).
-    """
-    with motor_lock:
-        fan_states[fan] = state
-        print(f"{fan} {'encendido' if state else 'apagado'}")
+            print("Error: La potencia debe estar entre 0 y 100.")
 
 
 def validate_power(power):
@@ -80,26 +60,25 @@ def cleanup():
     GPIO.cleanup()
 
 
-# Ejemplo de configuración para dos ventiladores
-if __name__ == "__main__":
-    motor1_pin = 20
-    motor2_pin = 21
+def example_motor_control():
+    """
+    Ejemplo de control dinámico del motor en un bucle.
+    """
+    motor_pin = 20  # Pin GPIO conectado al motor
+    pwm_motor = setup_motor(motor_pin, frequency=250)
+
     try:
-        pwm_motor1 = setup_motor(motor1_pin)
-        pwm_motor2 = setup_motor(motor2_pin)
-
-        # Encender y ajustar potencia de ejemplo
-        toggle_fan("fan1", True)  # Enciende el ventilador 1
-        set_motor_power(pwm_motor1, 50, "fan1")
-
-        toggle_fan("fan2", True)  # Enciende el ventilador 2
-        set_motor_power(pwm_motor2, 75, "fan2")
-
-        # Apagar
-        toggle_fan("fan1", False)  # Apaga el ventilador 1
-        set_motor_power(pwm_motor1, 50, "fan1")  # No tendrá efecto
-
+        while True:
+            potencia = float(input("Introduce la potencia del motor (0-100): "))
+            if validate_power(potencia):
+                set_motor_power(pwm_motor, potencia)
+            else:
+                print("Por favor, introduce un valor entre 0 y 100.")
     except KeyboardInterrupt:
         print("Control del motor detenido por el usuario.")
     finally:
         cleanup()
+
+
+if __name__ == "__main__":
+    example_motor_control()
