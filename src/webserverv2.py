@@ -18,14 +18,21 @@ current_setpoint = None
 def monitor_setpoint():
     """
     Hilo que monitorea y actualiza el setpoint automáticamente.
+    Llama a `main` para iniciar el control PID si hay un cambio en el setpoint.
     """
-    global current_setpoint
+    global current_setpoint, main_thread
     while True:
         new_setpoint = get_setpoint()
         if new_setpoint != current_setpoint:
             current_setpoint = new_setpoint
             update_custom_setpoint(current_setpoint)
             print(f"Setpoint actualizado automáticamente: {current_setpoint}°C")
+
+            # Inicia el sistema PID si no está activo o reinicia con el nuevo setpoint
+            if not main_thread or not main_thread.is_alive():
+                print("Iniciando el sistema PID con el nuevo setpoint...")
+                main_thread = Thread(target=main, daemon=True)
+                main_thread.start()
         sleep(5)  # Monitorear cada 5 segundos
 
 
