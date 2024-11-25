@@ -2,6 +2,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from threading import Thread, Event
 from time import sleep
+from motorPWM import setup_motor, set_motor_power, cleanup
 from funciones import update_custom_setpoint, get_setpoint, main
 from Temperature import read_temperature
 
@@ -12,32 +13,20 @@ port = 8080
 # Variables globales
 current_setpoint = None
 setpoint_updated = Event()  # Evento para indicar un cambio en el setpoint
+fan_thread = None
+fan_pwm = setup_motor(20)  # Configura el motor en el pin 20
 
-
-def monitor_setpoint():
+# Hilo para el control de ventiladores
+def control_fan(power, action):
     """
-    Monitorea los cambios en el setpoint y activa un evento si detecta un cambio.
+    Controla el estado de los ventiladores.
     """
-    global current_setpoint
-    while True:
-        new_setpoint = get_setpoint()
-        if new_setpoint != current_setpoint:
-            current_setpoint = new_setpoint
-            update_custom_setpoint(current_setpoint)
-            print("Setpoint actualizado automáticamente: {}°C".format(current_setpoint))
-            setpoint_updated.set()  # Marca el evento como activado
-        sleep(1)  # Reduce el intervalo para minimizar el delay
-
-
-def pid_control():
-    """
-    Control PID en un hilo separado, reinicia automáticamente si cambia el setpoint.
-    """
-    while True:
-        setpoint_updated.wait()  # Espera a que el setpoint cambie
-        print("Iniciando/reiniciando control PID...")
-        main()  # Ejecuta el control PID con el setpoint actual
-        setpoint_updated.clear()  # Resetea el evento hasta el próximo cambio
+    if action == "on":
+        set_motor_power(fan_pwm, power)
+        print(f"Ventilador encendido con potencia: {power}%")
+    elif action == "off":
+        set_motor_power(fan_pwm, 0)
+        print("Ventilador apagado")
 
 
 class ControlServer(BaseHTTPRequestHandler):
@@ -64,12 +53,14 @@ class ControlServer(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
+        global fan_thread
         content_length = int(self.headers.get('Content-Length'))
         post_data = self.rfile.read(content_length)
         try:
             data = json.loads(post_data.decode("utf-8"))
             action = data.get("action")
             value = data.get("value")
+            power = int(data.get("power", 0))  # Potencia por defecto 0
             response = {}
 
             if action == "update_setpoint":
@@ -79,6 +70,14 @@ class ControlServer(BaseHTTPRequestHandler):
                 update_custom_setpoint(current_setpoint)
                 setpoint_updated.set()  # Marca el evento para reiniciar el control PID
                 response["message"] = "Setpoint actualizado e inicio del control PID"
+
+            elif action == "control_fan":
+                if value == "on":
+                    Thread(target=control_fan, args=(power, "on"), daemon=True).start()
+                    response["message"] = f"Ventilador encendido con potencia: {power}%"
+                elif value == "off":
+                    Thread(target=control_fan, args=(0, "off"), daemon=True).start()
+                    response["message"] = "Ventilador apagado"
 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -91,12 +90,6 @@ class ControlServer(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    # Inicia el hilo de monitoreo de setpoint
-    Thread(target=monitor_setpoint, daemon=True).start()
-
-    # Inicia el hilo de control PID
-    Thread(target=pid_control, daemon=True).start()
-
     # Inicia el servidor web
     server = HTTPServer((address, port), ControlServer)
     print("Servidor corriendo en http://{}:{}".format(address, port))
@@ -104,4 +97,4 @@ if __name__ == "__main__":
         server.serve_forever()
     except KeyboardInterrupt:
         print("Servidor detenido")
-        server.server_close()
+        cleanup()

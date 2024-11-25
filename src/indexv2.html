@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Control de Temperatura</title>
+    <title>Control de Temperatura y Ventiladores</title>
     <meta charset="UTF-8" />
     <style>
       body {
@@ -27,12 +27,18 @@
     </style>
   </head>
   <body>
-    <h1>Control de Temperatura</h1>
+    <h1>Control de Temperatura y Ventiladores</h1>
     <div class="container">
       <div>
         <h3>Actualizar Temperatura en Celsius</h3>
         <input type="number" id="setpoint" placeholder="Temperatura en °C" />
         <button onclick="updateSetpoint()">Actualizar</button>
+      </div>
+      <div>
+        <h3>Control de Ventiladores</h3>
+        <input type="number" id="fan-power" placeholder="Potencia (0-100)" />
+        <button onclick="controlFan('on')">Encender</button>
+        <button onclick="controlFan('off')">Apagar</button>
       </div>
       <div class="output" id="temperature-display">Temperatura actual: ---</div>
     </div>
@@ -55,6 +61,27 @@
             }
           })
           .catch(() => alert("Error al actualizar el setpoint"));
+      }
+
+      // Función para controlar ventiladores
+      function controlFan(action) {
+        const data = {
+          action: "control_fan",
+          value: action,
+          power: document.getElementById("fan-power").value,
+        };
+        fetch(window.location.href, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(data.message);
+            }
+          })
+          .catch(() => alert("Error al controlar ventiladores"));
       }
 
       // Función para actualizar la temperatura automáticamente
