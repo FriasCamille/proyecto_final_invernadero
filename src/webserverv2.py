@@ -24,7 +24,7 @@ def monitor_setpoint():
         if new_setpoint != current_setpoint:
             current_setpoint = new_setpoint
             update_custom_setpoint(current_setpoint)
-            print(f"Setpoint actualizado automáticamente: {current_setpoint}°C")
+            print("Setpoint actualizado automáticamente: {}°C".format(current_setpoint))
             setpoint_updated.set()  # Marca el evento como activado
         sleep(1)  # Reduce el intervalo para minimizar el delay
 
@@ -85,7 +85,7 @@ class ControlServer(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(bytes(json.dumps(response), "utf-8"))
         except Exception as e:
-            print("Error procesando la solicitud:", e)
+            print("Error procesando la solicitud: {}".format(e))
             self.send_response(500)
             self.end_headers()
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     # Inicia el servidor web
     server = HTTPServer((address, port), ControlServer)
-    print(f"Servidor corriendo en http://{address}:{port}")
+    print("Servidor corriendo en http://{}:{}".format(address, port))
     try:
         server.serve_forever()
     except KeyboardInterrupt:
