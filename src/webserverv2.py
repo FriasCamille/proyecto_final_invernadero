@@ -20,7 +20,7 @@ def monitor_setpoint():
     """
     global current_setpoint
     while True:
-        new_setpoint = get_setpoint()
+        new_setpoint = get_setpoint()  # Obtiene el nuevo setpoint
         if new_setpoint != current_setpoint:
             current_setpoint = new_setpoint
             update_custom_setpoint(current_setpoint)
