@@ -1,3 +1,4 @@
+
 import threading
 import RPi.GPIO as GPIO
 import time
@@ -45,6 +46,14 @@ def solve_temp(setpoint):
     set_motor_power(pwm_motor_1, power)
     set_motor_power(pwm_motor_2, power)
 
+def solve_humidity():
+    if GPIO.input(PIN_INTERRUPT) == GPIO.HIGH:
+        GPIO.output(PIN_OUTPUT, GPIO.HIGH)
+        print("Interrupción detectada, PIN 16 en ALTO")
+        time.sleep(1)
+        GPIO.output(PIN_OUTPUT, GPIO.LOW)
+    else:
+        GPIO.output(PIN_OUTPUT, GPIO.LOW)
 
 
 def main():
@@ -55,6 +64,6 @@ def main():
         setpoint = get_setpoint()  # Obtén el setpoint dinámicamente
         control_temperature(setpoint)  # Llama a la función de control de temperatura
         solve_temp(setpoint)
-if __name__ == "__main__":
+        solve_humidity()
+if _name_ == "_main_":
     main()
-
