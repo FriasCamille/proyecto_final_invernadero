@@ -4,7 +4,7 @@ from threading import Thread, Lock
 from time import sleep
 from funciones import update_custom_setpoint, get_setpoint, main
 from Temperature import read_temperature
-from motorPWM import setup_motor, set_motor_power
+from motorPWM import setup_motor, set_motor_power, cleanup
 
 # Configuración del servidor
 address = "192.168.1.254"
@@ -14,6 +14,10 @@ port = 8080
 main_thread = None
 setpoint_thread = None
 current_setpoint = None
+
+# Configuración de motores
+GPIO.setwarnings(False)  # Desactiva advertencias de uso previo
+GPIO.cleanup()  # Limpia pines previos
 
 # Configuración de motores
 PIN_MOTOR_1 = 20
