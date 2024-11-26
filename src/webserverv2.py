@@ -1,46 +1,39 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from threading import Thread, Lock
-from motorPWM import setup_motor, set_motor_power, cleanup
+from threading import Thread
+from time import sleep
+from funciones import update_custom_setpoint, get_setpoint, main
 from Temperature import read_temperature
 
 # Configuración del servidor
 address = "192.168.1.254"
 port = 8080
 
-# Configuración de GPIO para el ventilador
-GPIO_PIN_FAN = 20
-fan_pwm = None  # PWM del ventilador
-fan_lock = Lock()  # Evita configuraciones concurrentes
+# Variable para controlar el hilo del sistema principal
+main_thread = None
+setpoint_thread = None
+current_setpoint = None
 
 
-def initialize_fan():
+def monitor_setpoint():
     """
-    Inicializa el PWM para el ventilador.
+    Hilo que monitorea y actualiza el setpoint automáticamente.
+    Llama a `main` para iniciar el control PID si hay un cambio en el setpoint.
     """
-    global fan_pwm
-    try:
-        cleanup()  # Limpia configuraciones previas
-        fan_pwm = setup_motor(GPIO_PIN_FAN)
-    except RuntimeError as e:
-        print("Error inicializando ventilador:", e)
+    global current_setpoint, main_thread
+    while True:
+        new_setpoint = get_setpoint()
+        if new_setpoint != current_setpoint:
+            current_setpoint = new_setpoint
+            update_custom_setpoint(current_setpoint)
+            print(f"Setpoint actualizado automáticamente: {current_setpoint}°C")
 
-
-def control_fan(power, action):
-    """
-    Controla el estado de los ventiladores.
-    """
-    global fan_pwm
-    with fan_lock:  # Asegura que solo un hilo configure el ventilador a la vez
-        if action == "on":
-            if 0 <= power <= 100:
-                set_motor_power(fan_pwm, power)
-                print(f"Ventilador encendido con potencia: {power}%")
-            else:
-                print("Error: Potencia fuera de rango (0-100)")
-        elif action == "off":
-            set_motor_power(fan_pwm, 0)
-            print("Ventilador apagado")
+            # Inicia el sistema PID si no está activo o reinicia con el nuevo setpoint
+            if not main_thread or not main_thread.is_alive():
+                print("Iniciando el sistema PID con el nuevo setpoint...")
+                main_thread = Thread(target=main, daemon=True)
+                main_thread.start()
+        sleep(5)  # Monitorear cada 5 segundos
 
 
 class ControlServer(BaseHTTPRequestHandler):
@@ -67,41 +60,44 @@ class ControlServer(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
+        global main_thread
         content_length = int(self.headers.get('Content-Length'))
         post_data = self.rfile.read(content_length)
         try:
             data = json.loads(post_data.decode("utf-8"))
             action = data.get("action")
             value = data.get("value")
-            power = int(data.get("power", 0))  # Potencia por defecto 0
             response = {}
 
-            if action == "control_fan":
-                if value == "on":
-                    Thread(target=control_fan, args=(power, "on"), daemon=True).start()
-                    response["message"] = f"Ventilador encendido con potencia: {power}%"
-                elif value == "off":
-                    Thread(target=control_fan, args=(0, "off"), daemon=True).start()
-                    response["message"] = "Ventilador apagado"
+            if action == "update_setpoint":
+                # Actualiza el setpoint
+                update_custom_setpoint(float(value))
+                # Inicia el sistema PID si no está activo
+                if not main_thread or not main_thread.is_alive():
+                    main_thread = Thread(target=main, daemon=True)
+                    main_thread.start()
+                response["message"] = "Setpoint actualizado e inicio del control PID"
 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(bytes(json.dumps(response), "utf-8"))
         except Exception as e:
-            print("Error procesando la solicitud: {}".format(e))
+            print("Error procesando la solicitud:", e)
             self.send_response(500)
             self.end_headers()
 
 
 if __name__ == "__main__":
-    initialize_fan()  # Inicializa el ventilador
+    # Inicia el hilo de monitoreo de setpoint
+    setpoint_thread = Thread(target=monitor_setpoint, daemon=True)
+    setpoint_thread.start()
 
     # Inicia el servidor web
     server = HTTPServer((address, port), ControlServer)
-    print("Servidor corriendo en http://{}:{}".format(address, port))
+    print(f"Servidor corriendo en http://{address}:{port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("Servidor detenido")
-        cleanup()
+        server.server_close()

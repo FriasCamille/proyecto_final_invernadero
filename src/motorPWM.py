@@ -1,11 +1,8 @@
 import RPi.GPIO as GPIO
 import time
-from threading import Lock
 
-GPIO.setwarnings(False)  # Deshabilita advertencias previas
-GPIO.setmode(GPIO.BCM)
 
-motor_lock = Lock()  # Bloqueo para evitar accesos concurrentes
+GPIO.setmode(GPIO.BCM)  
 
 def setup_motor(pin, frequency=250):
     """
@@ -14,44 +11,44 @@ def setup_motor(pin, frequency=250):
     Args:
         pin: Pin GPIO conectado al motor.
         frequency: Frecuencia del PWM (en Hz).
-
+    
     Returns:
         pwm: Objeto PWM inicializado.
     """
-    GPIO.setup(pin, GPIO.OUT)
-    pwm = GPIO.PWM(pin, frequency)
-    pwm.start(0)
+    GPIO.setup(pin, GPIO.OUT)  
+    pwm = GPIO.PWM(pin, frequency)  
+    pwm.start(0)  
     return pwm
-
 
 def set_motor_power(pwm, power):
     """
     Ajusta la potencia del motor.
-
+    
     Args:
         pwm: Objeto PWM configurado.
         power: Potencia en porcentaje (0-100).
     """
-    with motor_lock:  # Asegura que solo un proceso acceda al PWM
-        if validate_power(power):
-            pwm.ChangeDutyCycle(power)
-            print(f"Potencia del motor ajustada a: {power}%")
-        else:
-            print("Error: La potencia debe estar entre 0 y 100.")
+    if 0 <= power <= 100:
+        pwm.ChangeDutyCycle(power)  
+    else:
+        print("Error: La potencia debe estar entre 0 y 100.")
 
-
-def validate_power(power):
+def get_motor_power_input():
     """
-    Valida si la potencia está en el rango permitido.
-
-    Args:
-        power: Potencia a validar.
+    Solicita al usuario un valor válido para la potencia del motor.
 
     Returns:
-        bool: True si es válida, False de lo contrario.
+        float: Potencia en porcentaje (0-100).
     """
-    return 0 <= power <= 100
-
+    while True:
+        try:
+            potencia = float(input("Introduce la potencia del motor (0-100): "))
+            if 0 <= potencia <= 100:
+                return potencia
+            else:
+                print("Por favor, introduce un valor entre 0 y 100.")
+        except ValueError:
+            print("Entrada no válida. Introduce un número válido entre 0 y 100.")
 
 def cleanup():
     """
@@ -59,26 +56,18 @@ def cleanup():
     """
     GPIO.cleanup()
 
-
-def example_motor_control():
-    """
-    Ejemplo de control dinámico del motor en un bucle.
-    """
-    motor_pin = 20  # Pin GPIO conectado al motor
-    pwm_motor = setup_motor(motor_pin, frequency=250)
-
+# Ejemplo de uso
+if __name__ == "__main__":
+    motor_pin = 20  
     try:
+        pwm_motor = setup_motor(motor_pin, frequency=250)  
+        
         while True:
-            potencia = float(input("Introduce la potencia del motor (0-100): "))
-            if validate_power(potencia):
-                set_motor_power(pwm_motor, potencia)
-            else:
-                print("Por favor, introduce un valor entre 0 y 100.")
+            potencia = get_motor_power_input()
+            set_motor_power(pwm_motor, potencia)
+            time.sleep(0.5)  
+            
     except KeyboardInterrupt:
-        print("Control del motor detenido por el usuario.")
+        print("Detenido por el usuario.")
     finally:
         cleanup()
-
-
-if __name__ == "__main__":
-    example_motor_control()
