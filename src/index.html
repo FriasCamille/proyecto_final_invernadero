@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Control de Temperatura y Motores</title>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 20px;
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+      button,
+      input {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .output {
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Control de Temperatura y Motores</h1>
+
+    <div class="container">
+      <!-- Control de Temperatura -->
+      <div>
+        <h3>Actualizar Temperatura en Celsius</h3>
+        <input type="number" id="setpoint" placeholder="Temperatura en °C" />
+        <button onclick="updateSetpoint()">Actualizar</button>
+      </div>
+      <div class="output" id="temperature-display">Temperatura actual: ---</div>
+
+      <!-- Control de Motores -->
+      <h3>Control de Motores</h3>
+      <div>
+        <button onclick="controlMotor('motor_1_on')">Encender Motor 1</button>
+        <button onclick="controlMotor('motor_1_off')">Apagar Motor 1</button>
+      </div>
+      <div>
+        <button onclick="controlMotor('motor_2_on')">Encender Motor 2</button>
+        <button onclick="controlMotor('motor_2_off')">Apagar Motor 2</button>
+      </div>
+      <div>
+        <button onclick="controlMotor('motors_on')">
+          Encender Ambos Motores
+        </button>
+        <button onclick="controlMotor('motors_off')">
+          Apagar Ambos Motores
+        </button>
+      </div>
+      <div>
+        <input
+          type="number"
+          id="motor_power_1"
+          placeholder="Potencia Motor 1 (0-100)"
+        />
+        <button onclick="setMotorPower('motor_1')">
+          Ajustar Potencia Motor 1
+        </button>
+      </div>
+      <div>
+        <input
+          type="number"
+          id="motor_power_2"
+          placeholder="Potencia Motor 2 (0-100)"
+        />
+        <button onclick="setMotorPower('motor_2')">
+          Ajustar Potencia Motor 2
+        </button>
+      </div>
+      <div>
+        <input
+          type="number"
+          id="motors_power"
+          placeholder="Potencia Ambos (0-100)"
+        />
+        <button onclick="setMotorPower('both')">Ajustar Potencia Ambos</button>
+      </div>
+    </div>
+
+    <script>
+      // Función para actualizar el setpoint
+      function updateSetpoint() {
+        const data = {
+          action: "update_setpoint",
+          value: document.getElementById("setpoint").value,
+        };
+        fetch(window.location.href, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(data.message);
+            }
+          })
+          .catch(() => alert("Error al actualizar el setpoint"));
+      }
+
+      // Función para controlar los motores
+      function controlMotor(action) {
+        const data = { action: action };
+        fetch(window.location.href, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(data.message);
+            }
+          })
+          .catch(() => alert("Error al controlar el motor"));
+      }
+
+      // Función para ajustar la potencia de los motores
+      function setMotorPower(motor) {
+        let power;
+        if (motor === "motor_1") {
+          power = document.getElementById("motor_power_1").value;
+        } else if (motor === "motor_2") {
+          power = document.getElementById("motor_power_2").value;
+        } else {
+          power = document.getElementById("motors_power").value;
+        }
+
+        const data = { action: `set_${motor}_power`, value: power };
+        fetch(window.location.href, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(data.message);
+            }
+          })
+          .catch(() => alert("Error al ajustar la potencia"));
+      }
+
+      // Función para actualizar la temperatura automáticamente
+      function updateTemperature() {
+        fetch(window.location.href + "temperature", {
+          method: "GET",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.temperature) {
+              document.getElementById(
+                "temperature-display"
+              ).innerText = `Temperatura actual: ${data.temperature.toFixed(
+                2
+              )}°C`;
+            }
+          })
+          .catch(() => {
+            document.getElementById("temperature-display").innerText =
+              "Error obteniendo temperatura.";
+          });
+      }
+
+      // Actualiza la temperatura cada 5 segundos
+      setInterval(updateTemperature, 5000);
+      // Llama a la función al cargar la página
+      updateTemperature();
+    </script>
+  </body>
+</html>
