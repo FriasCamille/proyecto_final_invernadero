@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Control de Motores y Temperatura</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(to right, #141e30, #243b55);
+        color: white;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+      }
+      h1,
+      h2 {
+        margin-top: 20px;
+      }
+      .container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      .slider-container {
+        margin: 20px;
+        text-align: center;
+      }
+      .slider {
+        width: 300px;
+        margin: 10px 0;
+      }
+      .button {
+        margin: 10px;
+        padding: 15px 30px;
+        font-size: 18px;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        background-color: #4caf50;
+        color: white;
+        transition: transform 0.2s, background-color 0.2s;
+      }
+      .button:hover {
+        background-color: #45a049;
+        transform: scale(1.05);
+      }
+      .response {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #282c34;
+        border-radius: 5px;
+        width: 80%;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .temperature-box {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #333;
+        border-radius: 10px;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .chart-container {
+        width: 80%;
+        max-width: 800px;
+        margin: 20px auto;
+      }
+    </style>
+    <script>
+      function sendAction(action, value = null) {
+        fetch("/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: action, value: value }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerHTML = `<p>${data.message}</p>`;
+            responseDiv.style.color =
+              data.status === "success" ? "lightgreen" : "red";
+          })
+          .catch((error) => {
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerHTML = `<p>Error de conexión: ${error.message}</p>`;
+            responseDiv.style.color = "red";
+          });
+      }
+
+      function updateSliderValue(action, sliderId, labelId) {
+        const slider = document.getElementById(sliderId);
+        const value = slider.value;
+        const label = document.getElementById(labelId);
+        label.textContent = `${value}`; // Actualiza el texto sin duplicar "%"
+        sendAction(action, parseInt(value)); // Envía el valor al servidor
+      }
+
+      function updateTemperature() {
+        fetch("/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "temperatura", value: 0 }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (
+              data.status === "success" &&
+              data.message.startsWith("Temperatura promedio")
+            ) {
+              const tempBox = document.getElementById("temperature-box");
+              tempBox.textContent = data.message;
+            }
+          })
+          .catch((error) => {
+            const tempBox = document.getElementById("temperature-box");
+            tempBox.textContent = "Error obteniendo temperatura";
+          });
+      }
+
+      function sendSetValue() {
+        const value = document.getElementById("setpoint").value;
+        sendAction("set_value", parseFloat(value));
+      }
+      function setFoco() {
+        const focoInput = document.getElementById("foco-input").value;
+        const potencia = parseFloat(focoInput);
+
+        if (!isNaN(potencia) && potencia >= 0 && potencia <= 100) {
+          sendAction("foco", potencia); // Envía el valor al servidor
+        } else {
+          alert("Por favor, introduce un valor válido entre 0 y 100.");
+        }
+      }
+
+      function updateCharts() {
+        document.getElementById("temperatureChart").src =
+          "/temperature-chart?" + new Date().getTime();
+        document.getElementById("actionChart").src =
+          "/action-chart?" + new Date().getTime();
+      }
+
+      window.onload = function () {
+        updateCharts();
+      };
+
+      // Actualiza las gráficas cada minuto
+      setInterval(updateCharts, 60000);
+
+      // Llama inicial para que la temperatura se muestre al cargar la página
+      document.addEventListener("DOMContentLoaded", updateTemperature);
+    </script>
+  </head>
+  <body>
+    <h1>Panel de Control</h1>
+    <h2>Temperatura Actual</h2>
+    <div id="temperature-box" class="temperature-box">
+      Obteniendo temperatura...
+    </div>
+    <h2>Control de Motores</h2>
+    <div class="container">
+      <div class="slider-container">
+        <label for="motor1-slider">Motor Derecho</label>
+        <input
+          id="motor1-slider"
+          class="slider"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          oninput="updateSliderValue('motor_derecho', 'motor1-slider', 'motor1-value')"
+        />
+        <p>Potencia: <span id="motor1-value">50</span>%</p>
+      </div>
+      <div class="slider-container">
+        <label for="motor2-slider">Motor Izquierdo</label>
+        <input
+          id="motor2-slider"
+          class="slider"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          oninput="updateSliderValue('motor_izquierdo', 'motor2-slider', 'motor2-value')"
+        />
+        <p>Potencia: <span id="motor2-value">50</span>%</p>
+      </div>
+    </div>
+    <h2>Control de Ambos Motores</h2>
+    <div class="container">
+      <div class="slider-container">
+        <label for="ambos-slider">Ambos Motores</label>
+        <input
+          id="ambos-slider"
+          class="slider"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          oninput="updateSliderValue('ambos_motores', 'ambos-slider', 'ambos-value')"
+        />
+        <p>Potencia: <span id="ambos-value">70</span>%</p>
+      </div>
+    </div>
+    <h2>Control del Foco</h2>
+    <div class="container">
+      <div class="input-container">
+        <label for="foco-input">Foco (Potencia 0-100%)</label>
+        <input
+          type="number"
+          id="foco-input"
+          placeholder="0-100"
+          min="0"
+          max="100"
+          style="
+            padding: 10px;
+            font-size: 16px;
+            width: 150px;
+            margin-right: 10px;
+          "
+        />
+        <button class="button" onclick="setFoco()">Definir</button>
+      </div>
+    </div>
+    <h2>Otros Controles</h2>
+    <div class="container">
+      <button class="button" onclick="sendAction('bomba', 1)">
+        Encender Bomba
+      </button>
+      <button class="button" onclick="sendAction('bomba', 0)">
+        Apagar Bomba
+      </button>
+      <button class="button" onclick="sendAction('set_pid', 30)">
+        PID (30°C)
+      </button>
+    </div>
+    <h2>Modo Predeterminado</h2>
+    <button class="button" onclick="sendAction('predeterminado')">
+      Activar Modo Predeterminado
+    </button>
+    <h2>Establecer Temperatura</h2>
+    <div class="container">
+      <input
+        type="number"
+        id="setpoint"
+        placeholder="Setpoint °C"
+        min="0"
+        max="100"
+        style="padding: 10px; font-size: 16px; width: 150px; margin-right: 10px"
+      />
+      <button class="button" onclick="sendSetValue()">
+        Establecer Setpoint
+      </button>
+    </div>
+    <div class="chart-container">
+      <img
+        id="temperatureChart"
+        src="/temperature-chart"
+        alt="Gráfica de Temperatura"
+      />
+    </div>
+    <div class="chart-container">
+      <img id="actionChart" src="/action-chart" alt="Gráfica de Acciones" />
+    </div>
+    <div id="response" class="response"></div>
+  </body>
+</html>
